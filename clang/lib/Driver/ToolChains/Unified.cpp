@@ -35,11 +35,9 @@ Unified::Unified(const Driver &D, const llvm::Triple &Triple,
 void Unified::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args) const {
   // Include standard system headers
+  addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/usr/include");
   addSystemInclude(DriverArgs, CC1Args,
-                   getDriver().SysRoot + "/usr/include");
-  addSystemInclude(DriverArgs, CC1Args,
-                   getDriver().SysRoot + "/usr/include/" +
-                       getTripleString());
+                   getDriver().SysRoot + "/usr/include/" + getTripleString());
 }
 
 void Unified::AddLibCxxIncludePaths(const ArgList &DriverArgs,
@@ -133,6 +131,8 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // Disable lazy binding (resolve all symbols at link time)
   CmdArgs.push_back(Args.MakeArgString("-z"));
   CmdArgs.push_back(Args.MakeArgString("now"));
+  // Use GNU hash style for better symbol lookup performance
+  CmdArgs.push_back(Args.MakeArgString("--hash-style=gnu"));
 
   // PIE
   llvm::Reloc::Model RelocationModel;
@@ -155,8 +155,7 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
     std::string crtbegin =
         TC.getCompilerRT(Args, "crtbegin", ToolChain::FT_Object);
     if (TC.getVFS().exists(crtbegin)) {
-      CmdArgs.push_back(
-          Args.MakeArgString(TC.GetFilePath(crtbegin.c_str())));
+      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(crtbegin.c_str())));
     }
   }
 
@@ -193,11 +192,9 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
-    std::string crtend =
-        TC.getCompilerRT(Args, "crtend", ToolChain::FT_Object);
+    std::string crtend = TC.getCompilerRT(Args, "crtend", ToolChain::FT_Object);
     if (TC.getVFS().exists(crtend)) {
-      CmdArgs.push_back(
-          Args.MakeArgString(TC.GetFilePath(crtend.c_str())));
+      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(crtend.c_str())));
     }
   }
 
